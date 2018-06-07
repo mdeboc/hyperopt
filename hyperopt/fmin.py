@@ -16,9 +16,11 @@ import numpy as np
 from . import pyll
 from .utils import coarse_utcnow
 from . import base
+from .timer import Timer
 
 standard_library.install_aliases()
 logger = logging.getLogger(__name__)
+time_function = Timer.time_function
 
 
 def fmin_pass_expr_memo_ctrl(f):
@@ -110,6 +112,7 @@ class FMinIter(object):
                     break
         self.trials.refresh()
 
+    @time_function
     def block_until_done(self):
         already_printed = False
         if self.async:
@@ -129,6 +132,7 @@ class FMinIter(object):
         else:
             self.serial_evaluate()
 
+    @time_function
     def run(self, N, block_until_done=True):
         """
         block_until_done  means that the process blocks until ALL jobs in
@@ -176,6 +180,7 @@ class FMinIter(object):
                 break
 
         if block_until_done:
+            logger.info('>>>>>>>>>>>>>> call block_until_done')
             self.block_until_done()
             self.trials.refresh()
             logger.info('Queue empty, exiting run.')
@@ -194,13 +199,16 @@ class FMinIter(object):
             raise StopIteration()
         return self.trials
 
+    @time_function
     def exhaust(self):
         n_done = len(self.trials)
+        logger.info('>>>>>>>>>>>>>> call run')
         self.run(self.max_evals - n_done, block_until_done=self.async)
         self.trials.refresh()
         return self
 
 
+@time_function
 def fmin(fn, space, algo, max_evals, trials=None, rstate=None,
          allow_trials_fmin=True, pass_expr_memo_ctrl=None,
          catch_eval_exceptions=False,
@@ -317,6 +325,7 @@ def fmin(fn, space, algo, max_evals, trials=None, rstate=None,
                     rstate=rstate,
                     verbose=verbose)
     rval.catch_eval_exceptions = catch_eval_exceptions
+    logger.info('>>>>>>>>>>>>>> call exhaust')
     rval.exhaust()
     if return_argmin:
         return trials.argmin
